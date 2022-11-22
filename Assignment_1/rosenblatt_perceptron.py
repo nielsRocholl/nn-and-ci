@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def generate_artificial_data(p=1000, n=1):
+def generate_artificial_data(p=1000, n=1) -> list:
     """
     Generate artificial data sets containing P randomly generated N-dimensional feature vectors and binary labels.
     :param p: number of data points
