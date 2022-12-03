@@ -1,4 +1,3 @@
-import itertools
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -84,7 +83,7 @@ def train_perceptron(data: list, weights: np.array, epochs: int, n: int) -> np.a
     return weights, False
 
 
-def fraction_of_successful_runs(alpha, n, nD, nmax):
+def fraction_of_successful_runs(alpha, n, nD, nmax) -> float:
     """
     Calculate the fraction of successful runs for a given set of hyperparameters.
     :param alpha: α
@@ -110,19 +109,19 @@ def fraction_of_successful_runs(alpha, n, nD, nmax):
     return converged / nD
 
 
-def plot_fractions_of_successful_runs(hyper_params, results):
+def plot_fractions_of_successful_runs(hyper_params, results) -> None:
     """
     Plot the fraction of successful runs for each combination of hyperparameters.
-    :param hyper_params:
-    :param results:
-    :return:
+    :param hyper_params: dictionary of hyperparameters
+    :param results: pandas dataframe containing results
+    :return: None
     """
     fig, ax = plt.subplots()
     for n in hyper_params['N']:
         ax.plot(results[results['N'] == n]['α'], results[results['N'] == n]['fraction_of_successful_runs'],
                 label=f'N={n}')
-    ax.set_xlabel('α')
-    ax.set_ylabel('fraction of successful runs')
+    ax.set_xlabel('P/N')
+    ax.set_ylabel('Qls')
     ax.legend()
     plt.show()
 
@@ -131,13 +130,11 @@ def main():
     # initialise hyperparameters based on the problem statement:
     hyper_params = {
         'N': np.array([20, 40]),
-        'α': np.arange(0.75, 3, 0.25),
+        'α': np.arange(0.1, 4, 0.1),
         'nD': np.array([50]),
         'nmax': np.array([100])
     }
-    # generate all combinations of hyperparameters
-    keys, values = zip(*hyper_params.items())
-    hyper_param_combinations = [dict(zip(keys, v)) for v in itertools.product(*values)]
+    # pandas dataframe to store results
     results = pd.DataFrame(columns=['N', 'α', 'nD', 'nmax', 'fraction_of_successful_runs'])
     # perform training for each combination of hyperparameters
     for n in hyper_params['N']:
