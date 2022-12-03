@@ -141,7 +141,6 @@ def main():
         for alpha in hyper_params['α']:
             for nD in hyper_params['nD']:
                 for nmax in hyper_params['nmax']:
-                    # use pd. concat to append a new row to the results dataframe
                     results = pd.concat([results, pd.DataFrame({
                         'N': [n],
                         'α': [alpha],
