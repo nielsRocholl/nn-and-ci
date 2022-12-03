@@ -66,9 +66,6 @@ def train_perceptron(data: list, weights: np.array, epochs: int, n: int) -> np.a
     :param n: size of the data set
     :return: weights, bias, number of iterations
     """
-    # # initialize weights and bias
-    # weights = np.zeros(len(data[0][0]))
-    # bias = 0
 
     # sweep over data
     for e in range(epochs):
