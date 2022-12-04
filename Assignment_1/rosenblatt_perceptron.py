@@ -83,18 +83,18 @@ def train_perceptron(data: list, weights: np.array, epochs: int, n: int) -> np.a
     return weights, False
 
 
-def fraction_of_successful_runs(alpha, n, nD, nmax) -> float:
+def fraction_of_successful_runs(alpha, n, n_d, n_max) -> float:
     """
     Calculate the fraction of successful runs for a given set of hyperparameters.
     :param alpha: α
     :param n: total number of samples
-    :param nD: number of data sets
-    :param nmax: maximum number of epochs
+    :param n_d: number of data sets
+    :param n_max: maximum number of epochs
     :return:
     """
     converged = 0
     p = int(alpha * n)
-    for d in range(nD):
+    for d in range(n_d):
         # create artificial data set
         artificial_data = generate_artificial_data(p=p, n=n)
         # initialise weights
@@ -102,11 +102,11 @@ def fraction_of_successful_runs(alpha, n, nD, nmax) -> float:
         # train perceptron
         weights, success = train_perceptron(data=artificial_data,
                                             weights=weights,
-                                            epochs=nmax,
+                                            epochs=n_max,
                                             n=n
                                             )
         converged = converged + 1 if success else converged
-    return converged / nD
+    return converged / n_d
 
 
 def plot_fractions_of_successful_runs(hyper_params, results) -> None:
@@ -132,21 +132,21 @@ def main():
         'N': np.array([20, 40]),
         'α': np.arange(0.1, 4, 0.1),
         'nD': np.array([50]),
-        'nmax': np.array([100])
+        'n_max': np.array([100])
     }
     # pandas dataframe to store results
-    results = pd.DataFrame(columns=['N', 'α', 'nD', 'nmax', 'fraction_of_successful_runs'])
+    results = pd.DataFrame(columns=['N', 'α', 'nD', 'n_max', 'fraction_of_successful_runs'])
     # perform training for each combination of hyperparameters
     for n in hyper_params['N']:
         for alpha in hyper_params['α']:
             for nD in hyper_params['nD']:
-                for nmax in hyper_params['nmax']:
+                for n_max in hyper_params['n_max']:
                     results = pd.concat([results, pd.DataFrame({
                         'N': [n],
                         'α': [alpha],
                         'nD': [nD],
-                        'nmax': [nmax],
-                        'fraction_of_successful_runs': [fraction_of_successful_runs(alpha=alpha, n=n, nD=nD, nmax=nmax)]
+                        'n_max': [n_max],
+                        'fraction_of_successful_runs': [fraction_of_successful_runs(alpha=alpha, n=n, n_d=nD, n_max=n_max)]
                     })])
 
     # plot convergence as a using matplotlib
