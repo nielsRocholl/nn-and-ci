@@ -149,9 +149,9 @@ def plot_fractions_of_successful_runs(hyper_params, results) -> None:
 def main():
     # initialise hyperparameters based on the problem statement:
     hyper_params = {
-        'N': array([5]),                # dimensionality of the feature space
-        'α': arange(0.5, 4.5, 0.25),    # fraction of samples
-        'nD': array([10000]),           # number of independent data sets
+        'N': array([100]),                # dimensionality of the feature space
+        'α': arange(0.5, 4.5, 0.005),    # fraction of samples
+        'nD': array([5000]),           # number of independent data sets
         'n_max': array([100])           # maximum number of epochs
     }
     # pandas dataframe to store results
@@ -171,6 +171,7 @@ def main():
                             fraction_of_successful_runs(alpha=alpha, n=n, n_d=nD, n_max=n_max)]
                     })])
     t2 = time.time()
+    results.to_csv('results_n=100.csv', index=False)
     print(f'Elapsed time: {t2 - t1} seconds')
     # plot convergence as a using matplotlib
     plot_fractions_of_successful_runs(hyper_params=hyper_params, results=results)
