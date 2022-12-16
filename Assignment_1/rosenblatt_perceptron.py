@@ -1,8 +1,10 @@
+import os
 import time
+import matplotlib.pyplot as plt
 # use direct imports to speed up the code
-from numpy import arange, array, dot, zeros
+from numpy import arange, array, dot, zeros, sort
 from numpy.random import choice, normal
-from pandas import DataFrame, concat
+from pandas import DataFrame, concat, read_csv
 from matplotlib.pyplot import show, subplots
 # use numba for speed up
 from numba import jit
@@ -70,7 +72,7 @@ def train_perceptron(feature_vectors: array, labels: array, weights: array, epoc
     :return: weights, bias, number of iterations
     """
 
-    # sweep over data and show progress bar
+    # sweep over data
     for e in range(epochs):
         # limit the number of sweeps to n_max
         if e >= n_max:
@@ -83,10 +85,10 @@ def train_perceptron(feature_vectors: array, labels: array, weights: array, epoc
             label = labels[i]
             # calculate local potential
             local_potential = calculate_local_potential(weights, feature_vector, label)
-            # if the potential is smaller than 0, not converged
-            converged = False if local_potential <= 0 else converged
             # update weights
             weights = update_weight_vector(weights, feature_vector, label, n=n, local_potential=local_potential)
+            # if the potential is smaller than 0, not converged
+            converged = False if local_potential <= 0 else converged
         # if all local potentials are positive, return weights
         if converged:
             # converged
@@ -124,44 +126,51 @@ def fraction_of_successful_runs(alpha, n, n_d, n_max) -> float:
     return converged / n_d
 
 
-def plot_fractions_of_successful_runs(hyper_params, results) -> None:
+def plot_fractions_of_successful_runs(hyper_params, results, name="") -> None:
     """
     Plot the fraction of successful runs for each combination of hyperparameters.
     :param hyper_params: dictionary of hyperparameters
     :param results: pandas dataframe containing results
+    :param name: name of the plot
     :return: None
     """
-    fig, ax = subplots()
+    fig, ax = subplots(figsize=(11, 7))
     for n in hyper_params['N']:
         ax.plot(results[results['N'] == n]['α'], results[results['N'] == n]['fraction_of_successful_runs'],
-                label=f'N={n}')
-    ax.set_xlabel('P/N', fontsize=14)
-    ax.set_ylabel('Qls', fontsize=14)
-    ax.set_title('Fraction of Successful Runs', fontsize=18)
+                label=f'N={n}', linewidth=2)
+    ax.set_xlabel('P/N', fontsize=18)
+    ax.set_ylabel('Qls', fontsize=18)
+    ax.set_title(f'{name}', fontsize=22)
+    # do some styling
+    ax.set_xlim(0.75, 4.0)
+    ax.tick_params(axis='both', which='major', labelsize=16)
     ax.grid()
-    # set plot color to light grey
     ax.set_facecolor('#f0f0f0')
-
-    ax.legend(prop={'size': 12})
+    ax.legend(prop={'size': 18})
+    plt.savefig(f'plots/experiment_{name}.png')
     show()
 
 
-def main():
+def run_experiment():
     # initialise hyperparameters based on the problem statement:
     hyper_params = {
-        'N': array([100]),                # dimensionality of the feature space
-        'α': arange(0.5, 4.5, 0.005),    # fraction of samples
-        'nD': array([5000]),           # number of independent data sets
+        'N': array([100]),              # dimensionality of the feature space
+        'α': arange(0.5, 4.0, 0.25),    # fraction of samples
+        'nD': array([100]),             # number of independent data sets
         'n_max': array([100])           # maximum number of epochs
     }
     # pandas dataframe to store results
     results = DataFrame(columns=['N', 'α', 'nD', 'n_max', 'fraction_of_successful_runs'])
     # perform training for each combination of hyperparameters
     t1 = time.time()
+    max = len(hyper_params['N']) * len(hyper_params['α']) * len(hyper_params['nD']) * len(hyper_params['n_max'])
+    i = 0
     for n in hyper_params['N']:
         for alpha in hyper_params['α']:
             for nD in hyper_params['nD']:
                 for n_max in hyper_params['n_max']:
+                    i += 1
+                    print(f'[{i}/{max}]')
                     results = concat([results, DataFrame({
                         'N': [n],
                         'α': [alpha],
@@ -171,10 +180,24 @@ def main():
                             fraction_of_successful_runs(alpha=alpha, n=n, n_d=nD, n_max=n_max)]
                     })])
     t2 = time.time()
-    results.to_csv('results_n=100.csv', index=False)
+    results.to_csv('results/experiment_max_N_new.csv', index=False)
     print(f'Elapsed time: {t2 - t1} seconds')
     # plot convergence as a using matplotlib
-    plot_fractions_of_successful_runs(hyper_params=hyper_params, results=results)
+    plot_fractions_of_successful_runs(hyper_params=hyper_params, results=results, name='')
+
+
+def main():
+    if os.path.exists('results/final_results'):
+        # get results
+        results = read_csv('results/final_results.csv')
+        # sort according to N
+        N = {'N': results['N'].unique()}
+        N['N'] = sort(N['N'])
+        # plot results
+        plot_fractions_of_successful_runs(hyper_params=N, results=results, name='Large Experiment')
+    else:
+        # run experiment
+        run_experiment()
 
 
 if __name__ == '__main__':
