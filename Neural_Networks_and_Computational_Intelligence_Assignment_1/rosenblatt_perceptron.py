@@ -187,7 +187,8 @@ def run_experiment():
 
 
 def main():
-    if os.path.exists('results/final_results'):
+    if os.path.exists('results/final_results.csv'):
+        print("path exists!")
         # get results
         results = read_csv('results/final_results.csv')
         # sort according to N
