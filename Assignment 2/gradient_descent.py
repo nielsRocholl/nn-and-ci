@@ -24,7 +24,7 @@ def student_network(feature_vectors: np.array, weights: np.ndarray, vk=1) -> nda
     return np.sum(np.tanh(vk * np.dot(weights, feature_vectors)))
 
 
-def sgd(feature_vectors: np.ndarray, weights: np.ndarray, labels: np.ndarray):
+def sgd(feature_vectors: np.ndarray, weights: np.ndarray, labels: np.ndarray, vk=1):
     """
     stochastic gradient descent procedure w.r.t. the weight vectors wk, k = 1, 2, . . . K ,
     aimed at the minimization of the cost function
@@ -51,40 +51,32 @@ def sgd(feature_vectors: np.ndarray, weights: np.ndarray, labels: np.ndarray):
         """
         return np.sum([contribution(xi, weights, label) for xi, label in zip(feature_vectors, labels)])
 
-    def gradient(xi: np.array, weights: np.ndarray, label):
+    def delta(sigma, t, weights, feature_vector):
         """
+        delta = (sigma - t) * h'(sum_{j=1}^K v_j * g(w^{(j)} · xi))
+        sigma is the output of the student network, t is the target, h and g
+        are the tanh function, v_j are the weights of the hidden to output layer,
+        w^{(j)} are the input to hidden weights and xi is the input.
+        """
+        g = np.tanh(np.dot(weights, feature_vector))
+        h = np.tanh(np.sum(vk * g))
+        return (sigma - t) * (1 - h**2)
+
+    def gradient_of_single_input_to_hidden_weight(xi: np.array, weight: np.ndarray, label):
+        """
+        TODO: Nogsteeds onzeker of dit juist is.
         Calculate the gradient of the cost function w.r.t. a single weight
+        delta_wm = sigma * vk * g'(w_m · xi) * xi
         :param xi: a single data point / feature vector
-        :param weights: the weight vector
+        :param weight: m_th weight vector
         :param label: a single label
-        :return: the gradient of the cost function
+        :return: the gradient
         """
-        # TODO: Geen idee of deze gradient calculation klopt
-        prediction = student_network(xi, weights)
-        return (prediction - label) * xi
-
-    def gradient_via_central_difference(xi: np.array, weights: np.ndarray, label):
-        """
-        Calculate the gradient of the cost function w.r.t. a single weight
-        :param xi: a single data point / feature vector
-        :param weights: the weight vector
-        :param label: a single label
-        :return: the gradient of the cost function
-        """
-        epsilon = 1e-4
-        grad = np.zeros_like(weights)
-        print(grad)
-        for i in range(weights.shape[0]):
-            weights_plus = weights.copy()
-            weights_minus = weights.copy()
-            weights_plus[i] += epsilon / 2
-            weights_minus[i] -= epsilon / 2
-            grad[i] = (contribution(xi, weights_plus, label) - contribution(xi, weights_minus, label)) / epsilon
-        return grad
-
-
-    # TODO: ik weet niet of een van de twee gradienten klopt, hier moet naar gekeken worden. Ik heb de TA's gemaild
-    return None
+        d = delta(student_network(xi, weights), label, weights, xi)
+        g_prime = 1 - np.tanh(np.dot(weight, xi)) ** 2
+        return d * vk * g_prime * xi
+    print(feature_vectors[0], weights[0], labels[0])
+    print("gradient: ", gradient_of_single_input_to_hidden_weight(feature_vectors[0], weights[0], labels[0]))
 
 
 def generate_contiguous_data(p, n) -> tuple:
@@ -129,8 +121,7 @@ def main():
     # initialize hidden to output weights according to vk
     hidden_to_output_weights = np.array([variables['vk'] for _ in range(variables['K'])])
 
-    # print(sgd(feature_vectors, input_to_hidden_weights, labels))
-    # print(input_to_hidden_weights[0])
+    sgd(feature_vectors, input_to_hidden_weights, labels)
 
 
 
