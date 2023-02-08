@@ -29,7 +29,7 @@ def student_network(feature_vectors: np.ndarray, weights: np.ndarray, vk=1) -> n
     return np.sum(vk * np.tanh(np.dot(weights, feature_vectors)))
 
 
-def sgd(feature_vectors: np.ndarray, weights: np.ndarray, labels: np.ndarray, alpha, epochs, vk=1):
+def sgd(feature_vectors: np.ndarray, weights: np.ndarray, labels: np.ndarray, alpha, vk=1):
     """
     stochastic gradient descent procedure w.r.t. the weight vectors wk, k = 1, 2, . . . K ,
     aimed at the minimization of the cost function
@@ -85,21 +85,21 @@ def sgd(feature_vectors: np.ndarray, weights: np.ndarray, labels: np.ndarray, al
         g_prime = 1 - np.tanh(np.dot(weight, xi)) ** 2
         return d * vk * g_prime * xi
 
-    def total_error():
-        sigma = student_network(feature_vectors, weights)
-        return np.sum([(delta(sigma, t, weights, xi) * np.tanh() ) for t, xi in zip(labels, feature_vectors)])
+    #def total_error():
+    #    sigma = student_network(feature_vectors, weights)
+    #    return np.sum([(delta(sigma, t, weights, xi) * np.tanh() ) for t, xi in zip(labels, feature_vectors)])
 
     #print(feature_vectors[0], weights[0], labels[0])
     #print("gradient: ", gradient_of_single_input_to_hidden_weight(feature_vectors[0], weights[0], labels[0]))
 
     print("Error before descent: ", cost_function(feature_vectors,weights,labels))
 
-    # Loop through epochs
-    for i in range(epochs):
+    # Loop through the amount of feature vectors
+    for i in range(len(feature_vectors)):
         # Loop through a random permutation of the amount of weights
         for k in np.random.permutation(len(weights)):
             # 1. Calculate gradient
-            gradient = gradient_of_single_input_to_hidden_weight(feature_vectors[k], weights[k], labels[k])
+            gradient = gradient_of_single_input_to_hidden_weight(feature_vectors[i], weights[k], labels[i])
             # 2. Update weight vector
             weights[k] = weights[k] - alpha * gradient
 
@@ -140,10 +140,9 @@ def main():
     variables = {
         'vk': 1,  # fixed second layer weights
         'K': 2,  # number of hidden units
-        'p': 100,  # number of data points
+        'p': 500,  # number of data points
         'n': 5,  # number of dimensions
         'alpha': 0.05,  # learning rate
-        'epochs': 5, # amount of epochs
     }
     feature_vectors, labels = generate_contiguous_data(variables['p'], variables['n'])
     # initialize input to hidden weights as independent random vectors with |w1|^2 = 1 and |w2|^2 = 1.
@@ -151,7 +150,7 @@ def main():
     # initialize hidden to output weights according to vk
     hidden_to_output_weights = np.array([variables['vk'] for _ in range(variables['K'])])
 
-    sgd(feature_vectors, input_to_hidden_weights, labels, variables['alpha'], variables['epochs'])
+    sgd(feature_vectors, input_to_hidden_weights, labels, variables['alpha'])
 
 
 
