@@ -6,10 +6,6 @@ from numpy.random import choice
 import pandas as pd
 
 
-# use numba for speed up
-# from numba import jit
-
-
 def plot_error_vs_epochs(errors: np.ndarray, epochs: np.ndarray, title: str, till=None):
     """
     Plot the error vs. epochs.
@@ -28,7 +24,6 @@ def plot_error_vs_epochs(errors: np.ndarray, epochs: np.ndarray, title: str, til
     plt.show()
 
 
-# @jit(nopython=True)
 def student_network(feature_vectors: np.ndarray, weights: np.ndarray, vk=1) -> ndarray:
     """
     Calculate the weighted sum of hidden states, i.e. the linear output.
@@ -38,11 +33,6 @@ def student_network(feature_vectors: np.ndarray, weights: np.ndarray, vk=1) -> n
     :param weights: weight vector
     :return: the weighted sum of the hidden states
     """
-    # This commented code is from input to output, not from hidden layer to output
-    # sigma = 0
-    # for k in range(len(weights)):
-    #      sigma += vk * np.tanh(np.dot(weights[k], feature_vectors))
-    # return sigma
     return np.sum(vk * np.tanh(np.dot(weights, feature_vectors)))
 
 
@@ -74,7 +64,7 @@ def sgd(feature_vectors_: np.ndarray, weights_: np.ndarray, labels_: np.ndarray,
         return np.sum([contribution(xi, weights, label) for xi, label in zip(feature_vectors, labels)]) / len(
             feature_vectors)
 
-    def delta(sigma, t, weights, xi, vk=1):
+    def delta(sigma, t):
         """
         Calculate delta = (sigma - t) * h'(sum_{j=1}^K v_j * g(w^{(j)} · xi))
         :param sigma: the output of the student network
@@ -84,7 +74,6 @@ def sgd(feature_vectors_: np.ndarray, weights_: np.ndarray, labels_: np.ndarray,
         v_j are the weights of the hidden to output layer, v_j = 1,
         w^{(j)} are the input to hidden weights and xi is the input.
         """
-        # We kunnen dit nog algemener maken dat we aparte h(x) en h'(x) functie definíëren en die hier neerzetten
         return (sigma - t) * 1
 
     def gradient_of_single_input_to_hidden_weight(xi: np.ndarray, weight: np.ndarray, label):
@@ -96,7 +85,7 @@ def sgd(feature_vectors_: np.ndarray, weights_: np.ndarray, labels_: np.ndarray,
         :param label: a single label
         :return: the gradient
         """
-        d = delta(student_network(xi, weight), label, weight, xi, vk)
+        d = delta(student_network(xi, weight), label)
         g_prime = 1 - np.tanh(np.dot(weight, xi)) ** 2
         return d * vk * g_prime * xi
 
@@ -180,12 +169,11 @@ def part_b(variables) -> None:
     (dimension N = 50) and a 5000-dim. vector tau corresponding to the target values
     """
     print("Performing Part B")
-    feature_vectors = pd.read_csv('xi.csv', header=None).values[:, :variables['n']]
+    # get the first P data points
+    feature_vectors = pd.read_csv('xi.csv', header=None).values.T[:variables['p']]
     labels = np.array(pd.read_csv('tau.csv', header=None).values).flatten()[:variables['p']]
-    # print(labels)
-
-    # input_to_hidden_weights = create_input_to_hidden_weights(variables['K'], variables['n'])
-    # weights = sgd(feature_vectors, input_to_hidden_weights, labels, variables['alpha'], t_max=variables['t_max'])
+    input_to_hidden_weights = create_input_to_hidden_weights(variables['K'], feature_vectors.shape[1])
+    weights = sgd(feature_vectors, input_to_hidden_weights, labels, variables['alpha'], t_max=variables['t_max'])
 
 
 def main():
@@ -197,7 +185,7 @@ def main():
         'alpha': 0.05,  # learning rate
         't_max': 40,  # maximum number of iterations
     }
-    part_a(variables)
+    # part_a(variables)
     part_b(variables)
 
 
