@@ -16,11 +16,16 @@ def plot_error_vs_epochs(errors: np.ndarray, epochs: np.ndarray, title: str, til
     # if till is not None:
     #     errors = errors[:till]
     #     epochs = epochs[:till]
+
+    plt.figure(figsize=(7, 5))
     plt.plot(epochs, errors)
     plt.ylim(0, 1)
-    plt.title(title)
-    plt.xlabel("Epochs")
-    plt.ylabel("Error")
+    plt.grid()
+    # gray background
+    plt.title(title, fontdict={'fontsize': 18})
+    plt.xlabel("Epochs", fontdict={'fontsize': 16})
+    plt.ylabel("Error", fontdict={'fontsize': 16})
+    plt.tick_params(labelsize=14)
     plt.show()
 
 
