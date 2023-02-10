@@ -1,14 +1,31 @@
-import os
-import time
 import matplotlib.pyplot as plt
 import numpy as np
 # use direct imports to speed up the code
-from numpy import arange, array, dot, zeros, sort, ndarray
-from numpy.random import choice, normal
-from pandas import DataFrame, concat, read_csv
-from matplotlib.pyplot import show, subplots
+from numpy import ndarray
+from numpy.random import choice
+import pandas as pd
+
+
 # use numba for speed up
 # from numba import jit
+
+
+def plot_error_vs_epochs(errors: np.ndarray, epochs: np.ndarray, title: str, till=None):
+    """
+    Plot the error vs. epochs.
+    :param errors: the errors
+    :param epochs: the epochs
+    :param title: the title of the plot
+    """
+    # if till is not None:
+    #     errors = errors[:till]
+    #     epochs = epochs[:till]
+    plt.plot(epochs, errors)
+    plt.ylim(0, 1)
+    plt.title(title)
+    plt.xlabel("Epochs")
+    plt.ylabel("Error")
+    plt.show()
 
 
 # @jit(nopython=True)
@@ -29,7 +46,7 @@ def student_network(feature_vectors: np.ndarray, weights: np.ndarray, vk=1) -> n
     return np.sum(vk * np.tanh(np.dot(weights, feature_vectors)))
 
 
-def sgd(feature_vectors: np.ndarray, weights: np.ndarray, labels: np.ndarray, alpha, vk=1):
+def sgd(feature_vectors_: np.ndarray, weights_: np.ndarray, labels_: np.ndarray, alpha, vk=1, t_max=10):
     """
     stochastic gradient descent procedure w.r.t. the weight vectors wk, k = 1, 2, . . . K ,
     aimed at the minimization of the cost function
@@ -54,23 +71,21 @@ def sgd(feature_vectors: np.ndarray, weights: np.ndarray, labels: np.ndarray, al
         :param labels: the labels
         :return: the weighted sum of the hidden states
         """
-        return np.sum([contribution(xi, weights, label) for xi, label in zip(feature_vectors, labels)]) / len(feature_vectors)
+        return np.sum([contribution(xi, weights, label) for xi, label in zip(feature_vectors, labels)]) / len(
+            feature_vectors)
 
-    def delta(sigma, t, weight, feature_vector):
+    def delta(sigma, t, weights, xi, vk=1):
         """
         Calculate delta = (sigma - t) * h'(sum_{j=1}^K v_j * g(w^{(j)} · xi))
         :param sigma: the output of the student network
         :param t: the target label
-        :param weights: the weight vector
-        :param feature_vector: the input feature vectors
         h is the identity function h(x) = x, so h'(x) = 1
         g is the tanh function g(x) = tanh(x)
         v_j are the weights of the hidden to output layer, v_j = 1,
         w^{(j)} are the input to hidden weights and xi is the input.
         """
         # We kunnen dit nog algemener maken dat we aparte h(x) en h'(x) functie definíëren en die hier neerzetten
-        #return (sigma - t) * (1 - np.tanh(np.sum(vk * np.dot(weights, feature_vector))) ** 2)
-        return sigma - t
+        return (sigma - t) * 1
 
     def gradient_of_single_input_to_hidden_weight(xi: np.ndarray, weight: np.ndarray, label):
         """
@@ -81,31 +96,36 @@ def sgd(feature_vectors: np.ndarray, weights: np.ndarray, labels: np.ndarray, al
         :param label: a single label
         :return: the gradient
         """
-        d = delta(student_network(xi, weight), label, weight, xi)
+        d = delta(student_network(xi, weight), label, weight, xi, vk)
         g_prime = 1 - np.tanh(np.dot(weight, xi)) ** 2
         return d * vk * g_prime * xi
 
-    #def total_error():
-    #    sigma = student_network(feature_vectors, weights)
-    #    return np.sum([(delta(sigma, t, weights, xi) * np.tanh() ) for t, xi in zip(labels, feature_vectors)])
+    def train(feature_vectors=feature_vectors_, weights=weights_, labels=labels_, alpha=alpha, t_max=t_max):
+        # keep track of the weights and errors
+        weights_and_errors = []
+        error = []
+        for t in range(t_max):
+            e = cost_function(feature_vectors, weights, labels)
+            error.append(e)
+            print("Epoch {}: error = {}".format(t, e))
+            for _ in range(len(feature_vectors)):
+                # pick a random data point
+                i = np.random.randint(0, len(feature_vectors))
+                xi = feature_vectors[i]
+                label = labels[i]
+                for k in np.random.permutation(len(weights)):
+                    weights[k] -= alpha * gradient_of_single_input_to_hidden_weight(xi, weights[k], label)
+            weights_and_errors.append((weights, e))
+        # find the weights with the lowest error
+        lowest_error = min(weights_and_errors, key=lambda x: x[1])
+        index = weights_and_errors.index(lowest_error)
+        print("Lowest error: {}".format(lowest_error[1]))
+        plot_error_vs_epochs(np.array(error), np.arange(t_max), "Error vs. epochs", till=index)
+        # return the weights with the lowest error
+        return lowest_error[0]
 
-    #print(feature_vectors[0], weights[0], labels[0])
-    #print("gradient: ", gradient_of_single_input_to_hidden_weight(feature_vectors[0], weights[0], labels[0]))
-
-    print("Error before descent: ", cost_function(feature_vectors,weights,labels))
-
-    # Loop through the amount of feature vectors
-    for i in range(len(feature_vectors)):
-        # Loop through a random permutation of the amount of weights
-        for k in np.random.permutation(len(weights)):
-            # 1. Calculate gradient
-            gradient = gradient_of_single_input_to_hidden_weight(feature_vectors[i], weights[k], labels[i])
-            # 2. Update weight vector
-            weights[k] = weights[k] - alpha * gradient
-
-    print("Error after descent: ", cost_function(feature_vectors,weights,labels))
-
-    return weights
+    final_weights = train()
+    return final_weights
 
 
 def generate_contiguous_data(p, n) -> tuple:
@@ -136,22 +156,49 @@ def create_input_to_hidden_weights(K, n) -> np.ndarray:
     return weights
 
 
+def part_a(variables) -> None:
+    """
+    Perform part A of the assignment. Generate artificial data and train the soft committee network.
+    :param variables:
+    :return: None
+    """
+    print("Performing Part A")
+    # generate data`
+    feature_vectors, labels = generate_contiguous_data(variables['p'], variables['n'])
+    # initialize input to hidden weights as independent random vectors with |w1|^2 = 1 and |w2|^2 = 1.
+    input_to_hidden_weights = create_input_to_hidden_weights(variables['K'], variables['n'])
+    # train the network
+    weights = sgd(feature_vectors, input_to_hidden_weights, labels, variables['alpha'], t_max=variables['t_max'])
+
+
+def part_b(variables) -> None:
+    """
+    :param variables:
+    :return: None
+    Perform part B of the assignment. Load the data and train the soft committee network.
+    load the data comprise a 50 × 5000-dim. array xi corresponding to 5000 input vectors
+    (dimension N = 50) and a 5000-dim. vector tau corresponding to the target values
+    """
+    print("Performing Part B")
+    feature_vectors = pd.read_csv('xi.csv', header=None).values[:, :variables['n']]
+    labels = np.array(pd.read_csv('tau.csv', header=None).values).flatten()[:variables['p']]
+    # print(labels)
+
+    # input_to_hidden_weights = create_input_to_hidden_weights(variables['K'], variables['n'])
+    # weights = sgd(feature_vectors, input_to_hidden_weights, labels, variables['alpha'], t_max=variables['t_max'])
+
+
 def main():
     variables = {
         'vk': 1,  # fixed second layer weights
         'K': 2,  # number of hidden units
-        'p': 500,  # number of data points
+        'p': 100,  # number of data points
         'n': 5,  # number of dimensions
         'alpha': 0.05,  # learning rate
+        't_max': 40,  # maximum number of iterations
     }
-    feature_vectors, labels = generate_contiguous_data(variables['p'], variables['n'])
-    # initialize input to hidden weights as independent random vectors with |w1|^2 = 1 and |w2|^2 = 1.
-    input_to_hidden_weights = create_input_to_hidden_weights(variables['K'], variables['n'])
-    # initialize hidden to output weights according to vk
-    hidden_to_output_weights = np.array([variables['vk'] for _ in range(variables['K'])])
-
-    sgd(feature_vectors, input_to_hidden_weights, labels, variables['alpha'])
-
+    part_a(variables)
+    part_b(variables)
 
 
 if __name__ == '__main__':
