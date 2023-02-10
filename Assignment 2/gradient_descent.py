@@ -6,7 +6,8 @@ from numpy.random import choice
 import pandas as pd
 
 
-def plot_error_vs_epochs(errors: np.ndarray, epochs: np.ndarray, title: str, till=None):
+def plot_error_vs_epochs(errors: np.ndarray, error_generalization: np.ndarray, epochs: np.ndarray, title: str,
+                         till=None):
     """
     Plot the error vs. epochs.
     :param errors: the errors
@@ -18,13 +19,15 @@ def plot_error_vs_epochs(errors: np.ndarray, epochs: np.ndarray, title: str, til
     #     epochs = epochs[:till]
 
     plt.figure(figsize=(7, 5))
-    plt.plot(epochs, errors)
+    plt.plot(epochs, errors, label="Training error")
+    plt.plot(epochs, error_generalization, label="Generalization error")
     plt.ylim(0, 1)
     plt.grid()
-    # gray background
+    plt.legend()
     plt.title(title, fontdict={'fontsize': 18})
     plt.xlabel("Epochs", fontdict={'fontsize': 16})
     plt.ylabel("Error", fontdict={'fontsize': 16})
+
     plt.tick_params(labelsize=14)
     plt.show()
 
@@ -41,7 +44,9 @@ def student_network(feature_vectors: np.ndarray, weights: np.ndarray, vk=1) -> n
     return np.sum(vk * np.tanh(np.dot(weights, feature_vectors)))
 
 
-def sgd(feature_vectors_: np.ndarray, weights_: np.ndarray, labels_: np.ndarray, alpha, vk=1, t_max=10):
+def sgd(feature_vectors_: np.ndarray, labels_: np.ndarray,
+        feature_vectors_gen_: np.ndarray, labels_gen_: np.ndarray,
+        weights_: np.ndarray, alpha, vk=1, t_max=10):
     """
     stochastic gradient descent procedure w.r.t. the weight vectors wk, k = 1, 2, . . . K ,
     aimed at the minimization of the cost function
@@ -59,6 +64,17 @@ def sgd(feature_vectors_: np.ndarray, weights_: np.ndarray, labels_: np.ndarray,
         return ((student_network(xi, weights) - label) ** 2) / 2
 
     def cost_function(feature_vectors: np.ndarray, weights: np.ndarray, labels: np.ndarray):
+        """
+        Calculate the cost function, i.e. the sum of the contributions of all data points.
+        :param feature_vectors: the feature vectors
+        :param weights: the weight vector
+        :param labels: the labels
+        :return: the weighted sum of the hidden states
+        """
+        return np.sum([contribution(xi, weights, label) for xi, label in zip(feature_vectors, labels)]) / len(
+            feature_vectors)
+
+    def generalization_error(feature_vectors: np.ndarray, weights: np.ndarray, labels: np.ndarray):
         """
         Calculate the cost function, i.e. the sum of the contributions of all data points.
         :param feature_vectors: the feature vectors
@@ -94,13 +110,18 @@ def sgd(feature_vectors_: np.ndarray, weights_: np.ndarray, labels_: np.ndarray,
         g_prime = 1 - np.tanh(np.dot(weight, xi)) ** 2
         return d * vk * g_prime * xi
 
-    def train(feature_vectors=feature_vectors_, weights=weights_, labels=labels_, alpha=alpha, t_max=t_max):
+    def train(feature_vectors=feature_vectors_, labels=labels_,
+              feature_vectors_gen=feature_vectors_gen_, labels_gen=labels_gen_,
+              weights=weights_, alpha=alpha, t_max=t_max):
         # keep track of the weights and errors
         weights_and_errors = []
         error = []
+        error_generalization = []
         for t in range(t_max):
             e = cost_function(feature_vectors, weights, labels)
+            e_generalization = generalization_error(feature_vectors_gen, weights, labels_gen)
             error.append(e)
+            error_generalization.append(e_generalization)
             print("Epoch {}: error = {}".format(t, e))
             for _ in range(len(feature_vectors)):
                 # pick a random data point
@@ -114,26 +135,13 @@ def sgd(feature_vectors_: np.ndarray, weights_: np.ndarray, labels_: np.ndarray,
         lowest_error = min(weights_and_errors, key=lambda x: x[1])
         index = weights_and_errors.index(lowest_error)
         print("Lowest error: {}".format(lowest_error[1]))
-        plot_error_vs_epochs(np.array(error), np.arange(t_max), "Error vs. epochs", till=index)
+        plot_error_vs_epochs(np.array(error), np.array(error_generalization), np.arange(t_max), "Error vs. epochs",
+                             till=index)
         # return the weights with the lowest error
         return lowest_error[0]
 
     final_weights = train()
     return final_weights
-
-
-def generate_contiguous_data(p, n) -> tuple:
-    """
-    data set ID = {ξ, τ(ξ)} with continuous training labels τ(ξ) ∈ IR.
-    :param p: number of data points
-    :param n: number of dimensions
-    :return: dataset of size p, where each ξ is of dimension n, with continuous training labels τ(ξ) ∈ IR
-    """
-    # create a vector of n independent random components, with mean 0 and variance 1
-    feature_vectors = np.random.normal(0, 1, (p, n))
-    # create a random continuous label of uniform distribution between -1 and 1
-    labels = np.random.uniform(-1, 1, p)
-    return feature_vectors, labels
 
 
 def create_input_to_hidden_weights(K, n) -> np.ndarray:
@@ -150,22 +158,7 @@ def create_input_to_hidden_weights(K, n) -> np.ndarray:
     return weights
 
 
-def part_a(variables) -> None:
-    """
-    Perform part A of the assignment. Generate artificial data and train the soft committee network.
-    :param variables:
-    :return: None
-    """
-    print("Performing Part A")
-    # generate data`
-    feature_vectors, labels = generate_contiguous_data(variables['p'], variables['n'])
-    # initialize input to hidden weights as independent random vectors with |w1|^2 = 1 and |w2|^2 = 1.
-    input_to_hidden_weights = create_input_to_hidden_weights(variables['K'], variables['n'])
-    # train the network
-    weights = sgd(feature_vectors, input_to_hidden_weights, labels, variables['alpha'], t_max=variables['t_max'])
-
-
-def part_b(variables) -> None:
+def run_assignment(variables) -> None:
     """
     :param variables:
     :return: None
@@ -177,8 +170,12 @@ def part_b(variables) -> None:
     # get the first P data points
     feature_vectors = pd.read_csv('xi.csv', header=None).values.T[:variables['p']]
     labels = np.array(pd.read_csv('tau.csv', header=None).values).flatten()[:variables['p']]
+    # get test data
+    feature_vectors_test = pd.read_csv('xi.csv', header=None).values.T[variables['p']:variables['p'] + 50]
+    labels_test = np.array(pd.read_csv('tau.csv', header=None).values).flatten()[variables['p']:variables['p'] + 50]
     input_to_hidden_weights = create_input_to_hidden_weights(variables['K'], feature_vectors.shape[1])
-    weights = sgd(feature_vectors, input_to_hidden_weights, labels, variables['alpha'], t_max=variables['t_max'])
+    weights = sgd(feature_vectors, labels, feature_vectors_test, labels_test,
+                  input_to_hidden_weights, variables['alpha'], t_max=variables['t_max'])
 
 
 def main():
@@ -190,8 +187,7 @@ def main():
         'alpha': 0.05,  # learning rate
         't_max': 40,  # maximum number of iterations
     }
-    # part_a(variables)
-    part_b(variables)
+    run_assignment(variables)
 
 
 if __name__ == '__main__':
