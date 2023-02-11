@@ -1,5 +1,8 @@
+import os
+
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.colors import ListedColormap
 # use direct imports to speed up the code
 from numpy import ndarray
 from numpy.random import choice
@@ -13,7 +16,7 @@ def plot_error_vs_epochs(errors: np.ndarray, error_generalization: np.ndarray, e
     :param epochs: the epochs
     :param title: the title of the plot
     """
-    plt.figure(figsize=(7, 5))
+    plt.figure(figsize=(7, 5), dpi=200)
     plt.plot(epochs, errors, label="Training error")
     plt.plot(epochs, error_generalization, label="Generalization error")
     plt.ylim(0, 1)
@@ -29,6 +32,34 @@ def plot_error_vs_epochs(errors: np.ndarray, error_generalization: np.ndarray, e
     plt.show()
 
 
+def plot_error_vs_epochs_for_different_p():
+    """
+    Plot the error vs epoch, for different p values.
+    """
+    # load the data
+    data = pd.read_csv('results/error.csv')
+    # create a list of colors
+    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728']
+    # create a subplot for each p value
+    fig, axes = plt.subplots(nrows=len(data.p.unique()), figsize=(7, 2 * len(data.p.unique())), dpi=200, sharey=True)
+    # iterate over the p values and plot the data in the corresponding subplot
+    for i, p in enumerate(data.p.unique()):
+        # filter the data for the current p value
+        data_p = data[data.p == p]
+        c = colors.pop()
+        axes[i].plot(data_p.epoch, data_p.error, label=f'Train Error (p={p})', color=c, linewidth=2)
+        axes[i].plot(data_p.epoch, data_p.error_generalization, label=f'Test Error (p={p})', linestyle='--', color=c,
+                     linewidth=2)
+        axes[i].grid(linewidth=0.5)
+        # axes[i].legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize='large')
+        axes[i].legend(fontsize='medium', loc='upper right')
+    fig.text(0.5, 0.04, 'Epochs', ha='center', size=16)
+    fig.text(0.04, 0.5, 'Error', va='center', rotation='vertical', size=16)
+    fig.suptitle('Error vs. Epochs for Different p Values', size=18)
+    plt.savefig('plots/error_vs_epochs_for_different_p.png')
+    plt.show()
+
+
 def plot_weight_vector(weights):
     """
     Plot the weight vectors in a bar graph.
@@ -41,7 +72,7 @@ def plot_weight_vector(weights):
         x = np.arange(50)
         width = 0.40
 
-        fig, ax = plt.subplots(figsize=(7, 5))
+        fig, ax = plt.subplots(figsize=(7, 5), dpi=200)
         # add whitespace around the plot
         fig.subplots_adjust(left=0.15, right=0.95, top=0.9, bottom=0.15)
         ax.bar(x - width / 2, weights[0], width, label='First Hidden Unit', color='orange', linewidth=2)
@@ -55,7 +86,7 @@ def plot_weight_vector(weights):
         plt.show()
 
     def pot_3d():
-        fig = plt.figure(figsize=(7, 7))
+        fig = plt.figure(figsize=(7, 7), dpi=200)
         ax = fig.add_subplot(111, projection='3d')
         x = np.arange(50)
         y1 = np.ones(50)
@@ -76,6 +107,7 @@ def plot_weight_vector(weights):
 
     def plot_heatmap():
         # Create a heatmap of the weight vectors
+        fig, ax = plt.subplots(figsize=(7, 5), dpi=200)
         plt.imshow(weights, cmap='viridis', aspect=5)
         plt.colorbar()
 
@@ -182,7 +214,6 @@ def sgd(feature_vectors_: np.ndarray, labels_: np.ndarray,
             e_generalization = generalization_error(feature_vectors_gen, weights, labels_gen)
             error.append(e)
             error_generalization.append(e_generalization)
-            print("Epoch {}: error = {}".format(t, e))
             for _ in range(len(feature_vectors)):
                 # pick a random data point
                 i = np.random.randint(0, len(feature_vectors))
@@ -226,7 +257,6 @@ def run_assignment(variables) -> None:
     load the data comprise a 50 × 5000-dim. array xi corresponding to 5000 input vectors
     (dimension N = 50) and a 5000-dim. vector tau corresponding to the target values
     """
-    print("Performing Part B")
     # get the first P data points
     feature_vectors = pd.read_csv('xi.csv', header=None).values.T[:variables['p']]
     labels = np.array(pd.read_csv('tau.csv', header=None).values).flatten()[:variables['p']]
@@ -249,6 +279,14 @@ def run_assignment(variables) -> None:
     # average the errors
     e = np.mean(np.array(e), axis=0)
     e_gen = np.mean(np.array(e_gen), axis=0)
+    # save the errors to a file
+    df = pd.DataFrame({'p': variables['p'], 'error': e, 'error_generalization': e_gen, 'epoch': np.arange(variables['t_max'])})
+    if os.path.exists('results/error.csv'):
+        # check if p is already in the file
+        if not pd.read_csv('results/error.csv').p.isin([variables['p']]).any():
+            df.to_csv('results/error.csv', mode='a', header=False)
+    else:
+        df.to_csv('results/error.csv')
     plot_error_vs_epochs(e, e_gen, np.arange(variables['t_max']), "Error vs. epochs", variables)
 
 
@@ -260,11 +298,19 @@ def main():
         'n': 5,  # number of dimensions
         'alpha': 0.05,  # learning rate
         't_max': 40,  # maximum number of iterations
-        'experiments': 1,  # number of experiments
-        'adaptive': True  # adaptive learning rate or not
-    }
-    run_assignment(variables)
+        'experiments': 40,  # number of experiments
+        'adaptive': False  # adaptive learning rate or not
 
+    }
+    print(f'Performing base experiment')
+    format_variables = '\n '.join([f'{key}={value}' for key, value in variables.items()])
+    print(f'Variables: {format_variables}')
+    run_assignment(variables)
+    print(f'\nPerforming bonus 1: varying p')
+    plot_error_vs_epochs_for_different_p()
+    print(f'\nPerforming bonus 2: adaptive learning rate')
+    variables['adaptive'] = True
+    run_assignment(variables)
 
 if __name__ == '__main__':
     main()
