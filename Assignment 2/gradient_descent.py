@@ -6,30 +6,26 @@ from numpy.random import choice
 import pandas as pd
 
 
-def plot_error_vs_epochs(errors: np.ndarray, error_generalization: np.ndarray, epochs: np.ndarray, title: str, experiments: int, alpha: float):
+def plot_error_vs_epochs(errors: np.ndarray, error_generalization: np.ndarray, epochs: np.ndarray, title: str, variables: dict):
     """
     Plot the error vs. epochs.
     :param errors: the errors
     :param epochs: the epochs
     :param title: the title of the plot
     """
-    # if till is not None:
-    #     errors = errors[:till]
-    #     epochs = epochs[:till]
-
     plt.figure(figsize=(7, 5))
     plt.plot(epochs, errors, label="Training error")
     plt.plot(epochs, error_generalization, label="Generalization error")
     plt.ylim(0, 1)
     plt.grid()
-    # increase font size of the legend
+    variables = ' '.join([f'{key}={value}' for key, value in variables.items()])
     plt.legend(fontsize='large')
     plt.title(title, fontdict={'fontsize': 18})
     plt.xlabel("Epochs", fontdict={'fontsize': 16})
     plt.ylabel("Error", fontdict={'fontsize': 16})
 
     plt.tick_params(labelsize=14)
-    plt.savefig(f'plots/{title}_experiment={experiments}_alpha={alpha}.png')
+    plt.savefig(f'plots/{title}_{variables}.png')
     plt.show()
 
 
@@ -66,13 +62,15 @@ def plot_weight_vector(weights):
         y2 = np.ones(50) * 2
         ax.plot(x, y1, weights[0], label='First Hidden Unit')
         ax.plot(x, y2, weights[1], label='Second Hidden Unit')
-
-        ax.set_xlabel('Weight Index', fontdict={'fontsize': 14}, labelpad=10)
-        ax.set_ylabel('Hidden Unit', fontdict={'fontsize': 14}, labelpad=10)
-        ax.set_zlabel('Weight Value', fontdict={'fontsize': 14}, labelpad=10)
+        # add whitespace on the right
+        fig.subplots_adjust(right=0.8)
+        ax.set_xlabel('Weight Index', fontdict={'fontsize': 14}, labelpad=20)
+        ax.set_ylabel('Hidden Unit', fontdict={'fontsize': 14}, labelpad=20)
+        ax.set_zlabel('Weight Value', fontdict={'fontsize': 14}, labelpad=20)
         ax.set_title('Weight Vectors', fontdict={'fontsize': 16})
-        plt.tick_params(labelsize=14)
-        ax.legend(fontsize='large')
+        plt.tick_params(labelsize=14, pad=10)
+        # move the legend tiny bit to the top right
+        ax.legend(loc='upper left', bbox_to_anchor=(0.7, 1), fontsize='large')
         plt.savefig('plots/weight_vectors_3d.png')
         plt.show()
 
@@ -108,7 +106,7 @@ def student_network(feature_vectors: np.ndarray, weights: np.ndarray, vk=1) -> n
 
 def sgd(feature_vectors_: np.ndarray, labels_: np.ndarray,
         feature_vectors_gen_: np.ndarray, labels_gen_: np.ndarray,
-        weights_: np.ndarray, alpha, vk=1, t_max=10):
+        weights_: np.ndarray, alpha, vk=1, t_max=10, adaptive=False):
     """
     stochastic gradient descent procedure w.r.t. the weight vectors wk, k = 1, 2, . . . K ,
     aimed at the minimization of the cost function
@@ -174,7 +172,7 @@ def sgd(feature_vectors_: np.ndarray, labels_: np.ndarray,
 
     def train(feature_vectors=feature_vectors_, labels=labels_,
               feature_vectors_gen=feature_vectors_gen_, labels_gen=labels_gen_,
-              weights=weights_, alpha=alpha, t_max=t_max):
+              weights=weights_, alpha=alpha, t_max=t_max, adaptive=adaptive):
         # keep track of the weights and errors
         weights_and_errors = []
         error = []
@@ -193,6 +191,8 @@ def sgd(feature_vectors_: np.ndarray, labels_: np.ndarray,
                 for k in np.random.permutation(len(weights)):
                     weights[k] -= alpha * gradient_of_single_input_to_hidden_weight(xi, weights[k], label)
             weights_and_errors.append((weights, e))
+            if adaptive:
+                alpha *= 0.9
         # find the weights with the lowest error
         lowest_error = min(weights_and_errors, key=lambda x: x[1])
         index = weights_and_errors.index(lowest_error)
@@ -240,7 +240,8 @@ def run_assignment(variables) -> None:
     for experiment in range(variables['experiments']):
         input_to_hidden_weights = create_input_to_hidden_weights(variables['K'], feature_vectors.shape[1])
         weights, error, error_generalization = sgd(feature_vectors, labels, feature_vectors_test, labels_test,
-                      input_to_hidden_weights, variables['alpha'], t_max=variables['t_max'])
+                                                   input_to_hidden_weights, variables['alpha'],
+                                                   t_max=variables['t_max'], adaptive=variables['adaptive'])
         e.append(error)
         e_gen.append(error_generalization)
         if experiment == variables['experiments'] - 1:
@@ -248,7 +249,7 @@ def run_assignment(variables) -> None:
     # average the errors
     e = np.mean(np.array(e), axis=0)
     e_gen = np.mean(np.array(e_gen), axis=0)
-    plot_error_vs_epochs(e, e_gen, np.arange(variables['t_max']), "Error vs. epochs", variables['experiments'], variables['alpha'])
+    plot_error_vs_epochs(e, e_gen, np.arange(variables['t_max']), "Error vs. epochs", variables)
 
 
 def main():
@@ -259,7 +260,8 @@ def main():
         'n': 5,  # number of dimensions
         'alpha': 0.05,  # learning rate
         't_max': 40,  # maximum number of iterations
-        'experiments': 50 # number of experiments
+        'experiments': 1,  # number of experiments
+        'adaptive': True  # adaptive learning rate or not
     }
     run_assignment(variables)
 
