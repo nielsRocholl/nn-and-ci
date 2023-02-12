@@ -2,16 +2,18 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.colors import ListedColormap
 # use direct imports to speed up the code
 from numpy import ndarray
 from numpy.random import choice
 import pandas as pd
 
 
-def plot_error_vs_epochs(errors: np.ndarray, error_generalization: np.ndarray, epochs: np.ndarray, title: str, variables: dict):
+def plot_error_vs_epochs(errors: np.ndarray, error_generalization: np.ndarray, epochs: np.ndarray, title: str,
+                         variables: dict):
     """
     Plot the error vs. epochs.
+    :param variables: the variables used in the experiment
+    :param error_generalization: the generalization error
     :param errors: the errors
     :param epochs: the epochs
     :param title: the title of the plot
@@ -60,18 +62,19 @@ def plot_error_vs_epochs_for_different_p():
     plt.show()
 
 
-def plot_weight_vector(weights):
+def plot_weight_vector(weights: np.ndarray) -> None:
     """
     Plot the weight vectors in a bar graph.
-
-    Parameters:
-    weights (numpy.ndarray): The weight vectors to plot, with shape (2, 50).
+    :param weights: the weight vectors
     """
 
-    def plot_bar():
+    def plot_bar() -> None:
+        """
+        Plot the weight vectors in a bar graph.
+        :return: None
+        """
         x = np.arange(50)
         width = 0.40
-
         fig, ax = plt.subplots(figsize=(7, 5), dpi=200)
         # add whitespace around the plot
         fig.subplots_adjust(left=0.15, right=0.95, top=0.9, bottom=0.15)
@@ -85,7 +88,11 @@ def plot_weight_vector(weights):
         plt.savefig('plots/weight_vectors_bar.png')
         plt.show()
 
-    def pot_3d():
+    def pot_3d() -> None:
+        """
+        Plot the weight vectors in a 3D graph.
+        :return: None
+        """
         fig = plt.figure(figsize=(7, 7), dpi=200)
         ax = fig.add_subplot(111, projection='3d')
         x = np.arange(50)
@@ -105,8 +112,11 @@ def plot_weight_vector(weights):
         plt.savefig('plots/weight_vectors_3d.png')
         plt.show()
 
-    def plot_heatmap():
-        # Create a heatmap of the weight vectors
+    def plot_heatmap() -> None:
+        """
+        Plot the weight vectors in a heatmap.
+        :return: None
+        """
         fig, ax = plt.subplots(figsize=(7, 5), dpi=200)
         plt.imshow(weights, cmap='viridis', aspect=5)
         plt.colorbar()
@@ -138,14 +148,14 @@ def student_network(feature_vectors: np.ndarray, weights: np.ndarray, vk=1) -> n
 
 def sgd(feature_vectors_: np.ndarray, labels_: np.ndarray,
         feature_vectors_gen_: np.ndarray, labels_gen_: np.ndarray,
-        weights_: np.ndarray, alpha, vk=1, t_max=10, adaptive=False):
+        weights_: np.ndarray, alpha, vk=1, t_max=10, adaptive=False) -> tuple:
     """
     stochastic gradient descent procedure w.r.t. the weight vectors wk, k = 1, 2, . . . K ,
     aimed at the minimization of the cost function
     :return: the updated weight vectors
     """
 
-    def contribution(xi: np.array, weights: np.ndarray, label):
+    def contribution(xi: np.array, weights: np.ndarray, label) -> float:
         """
         Calculate the contribution of a data point to the gradient.
         :param xi: a single data point/ feature vector
@@ -155,7 +165,7 @@ def sgd(feature_vectors_: np.ndarray, labels_: np.ndarray,
         """
         return ((student_network(xi, weights) - label) ** 2) / 2
 
-    def cost_function(feature_vectors: np.ndarray, weights: np.ndarray, labels: np.ndarray):
+    def cost_function(feature_vectors: np.ndarray, weights: np.ndarray, labels: np.ndarray) -> float:
         """
         Calculate the cost function, i.e. the sum of the contributions of all data points.
         :param feature_vectors: the feature vectors
@@ -166,7 +176,7 @@ def sgd(feature_vectors_: np.ndarray, labels_: np.ndarray,
         return np.sum([contribution(xi, weights, label) for xi, label in zip(feature_vectors, labels)]) / len(
             feature_vectors)
 
-    def generalization_error(feature_vectors: np.ndarray, weights: np.ndarray, labels: np.ndarray):
+    def generalization_error(feature_vectors: np.ndarray, weights: np.ndarray, labels: np.ndarray) -> float:
         """
         Calculate the cost function, i.e. the sum of the contributions of all data points.
         :param feature_vectors: the feature vectors
@@ -177,7 +187,7 @@ def sgd(feature_vectors_: np.ndarray, labels_: np.ndarray,
         return np.sum([contribution(xi, weights, label) for xi, label in zip(feature_vectors, labels)]) / len(
             feature_vectors)
 
-    def delta(sigma, t):
+    def delta(sigma, t) -> float:
         """
         Calculate delta = (sigma - t) * h'(sum_{j=1}^K v_j * g(w^{(j)} · xi))
         :param sigma: the output of the student network
@@ -189,7 +199,7 @@ def sgd(feature_vectors_: np.ndarray, labels_: np.ndarray,
         """
         return (sigma - t) * 1
 
-    def gradient_of_single_input_to_hidden_weight(xi: np.ndarray, weight: np.ndarray, label):
+    def gradient_of_single_input_to_hidden_weight(xi: np.ndarray, weight: np.ndarray, label) -> float:
         """
         Calculate the gradient of the cost function w.r.t. a single weight
         delta_wm = sigma * vk * g'(w_m · xi) * xi
@@ -204,7 +214,7 @@ def sgd(feature_vectors_: np.ndarray, labels_: np.ndarray,
 
     def train(feature_vectors=feature_vectors_, labels=labels_,
               feature_vectors_gen=feature_vectors_gen_, labels_gen=labels_gen_,
-              weights=weights_, alpha=alpha, t_max=t_max, adaptive=adaptive):
+              weights=weights_, alpha=alpha, t_max=t_max, adaptive=adaptive) -> tuple:
         # keep track of the weights and errors
         weights_and_errors = []
         error = []
@@ -219,15 +229,13 @@ def sgd(feature_vectors_: np.ndarray, labels_: np.ndarray,
                 i = np.random.randint(0, len(feature_vectors))
                 xi = feature_vectors[i]
                 label = labels[i]
-                for k in np.random.permutation(len(weights)):
+                for k in range(len(weights)):
                     weights[k] -= alpha * gradient_of_single_input_to_hidden_weight(xi, weights[k], label)
-            weights_and_errors.append((weights, e))
+            weights_and_errors.append((weights, error_generalization))
             if adaptive:
                 alpha *= 0.9
         # find the weights with the lowest error
         lowest_error = min(weights_and_errors, key=lambda x: x[1])
-        index = weights_and_errors.index(lowest_error)
-
         # return the weights with the lowest error
         return lowest_error[0], error, error_generalization
 
@@ -274,13 +282,15 @@ def run_assignment(variables) -> None:
                                                    t_max=variables['t_max'], adaptive=variables['adaptive'])
         e.append(error)
         e_gen.append(error_generalization)
-        if experiment == variables['experiments'] - 1:
+        # if there is more than one hidden unit, plot the weight vectors
+        if experiment == variables['experiments'] - 1 and variables['K'] > 1:
             plot_weight_vector(weights)
     # average the errors
     e = np.mean(np.array(e), axis=0)
     e_gen = np.mean(np.array(e_gen), axis=0)
     # save the errors to a file
-    df = pd.DataFrame({'p': variables['p'], 'error': e, 'error_generalization': e_gen, 'epoch': np.arange(variables['t_max'])})
+    df = pd.DataFrame(
+        {'p': variables['p'], 'error': e, 'error_generalization': e_gen, 'epoch': np.arange(variables['t_max'])})
     if os.path.exists('results/error.csv'):
         # check if p is already in the file
         if not pd.read_csv('results/error.csv').p.isin([variables['p']]).any():
@@ -298,7 +308,7 @@ def main():
         'n': 5,  # number of dimensions
         'alpha': 0.05,  # learning rate
         't_max': 40,  # maximum number of iterations
-        'experiments': 40,  # number of experiments
+        'experiments': 50,  # number of experiments
         'adaptive': False  # adaptive learning rate or not
 
     }
@@ -311,6 +321,7 @@ def main():
     print(f'\nPerforming bonus 2: adaptive learning rate')
     variables['adaptive'] = True
     run_assignment(variables)
+
 
 if __name__ == '__main__':
     main()
