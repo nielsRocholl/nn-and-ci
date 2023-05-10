@@ -33,3 +33,7 @@ def generate_artificial_data(N, P):
 The Rosenblatt perceptron training algorithm is a crucial component of this project. Before training, all weights are initialized to zero. The perceptron is then trained over N_{max} sweeps, iterating over all samples ξ^{\mu} in the dataset.
 
 For each sample, the local potential E^{\mu(t)} is calculated. The weights are then updated according to the local potential. The training process ends when the algorithm converges (E^{v} > 0 for all v in the dataset) or when the maximum number of sweeps N_{max} is completed.
+
+## Results:
+
+![Performance](Rosenblatt Perceptron Algorithm/plots/experiment_Large Experiment.png)
