@@ -36,4 +36,4 @@ For each sample, the local potential E^{\mu(t)} is calculated. The weights are t
 
 ## Results:
 
-![Performance](Rosenblatt Perceptron Algorithm/plots/experiment_Large Experiment.png)
+![Performance](Rosenblatt%20Perceptron%20Algorithm/plots/experiment_Large%20Experiment.png)
