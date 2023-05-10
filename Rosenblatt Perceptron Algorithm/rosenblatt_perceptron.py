@@ -138,15 +138,15 @@ def plot_fractions_of_successful_runs(hyper_params, results, name="") -> None:
     for n in hyper_params['N']:
         ax.plot(results[results['N'] == n]['α'], results[results['N'] == n]['fraction_of_successful_runs'],
                 label=f'N={n}', linewidth=2)
-    ax.set_xlabel('P/N', fontsize=18)
-    ax.set_ylabel('Qls', fontsize=18)
-    ax.set_title(f'{name}', fontsize=22)
+    ax.set_xlabel('P/N', fontsize=30)
+    ax.set_ylabel('Qls', fontsize=30)
+    ax.set_title(f'{name}', fontsize=30)
     # do some styling
     ax.set_xlim(0.75, 4.0)
-    ax.tick_params(axis='both', which='major', labelsize=16)
+    ax.tick_params(axis='both', which='major', labelsize=20)
     ax.grid()
     ax.set_facecolor('#f0f0f0')
-    ax.legend(prop={'size': 18})
+    ax.legend(prop={'size': 25})
     plt.savefig(f'plots/experiment_{name}.png')
     show()
 
