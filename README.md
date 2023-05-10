@@ -45,6 +45,8 @@ For each sample, the local potential `E^{\mu(t)}` is calculated. The weights are
 
 ![Performance](Rosenblatt%20Perceptron%20Algorithm/plots/experiment_Large%20Experiment.png)
 
+---
+---
 
 
 # Backpropagation and Stochastic Gradient Descent for a Soft Committee Machine
